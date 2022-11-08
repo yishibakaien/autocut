@@ -75,7 +75,9 @@ class Transcribe:
         for seg in speech_timestamps:
             r = self.whisper_model.transcribe(
                     audio[int(seg['start']):int(seg['end'])],
-                    task='transcribe', language='zh', initial_prompt=self.args.prompt)
+                    task='transcribe',
+                    language='Chinese',
+                    initial_prompt=self.args.prompt)
             r['origin_timestamp'] = seg
             res.append(r)
         logging.info(f'Done transcription in {time.time()-tic:.1f} sec')
@@ -106,11 +108,11 @@ class Transcribe:
                 _add_sub(start, end, s["text"])
                 prev_end = end
 
-        with open(output, 'w') as f:
-            f.write(srt.compose(subs))
+        with open(output, 'wb') as f:
+            f.write(srt.compose(subs).encode('utf-8'))
 
     def _save_md(self, md_fn, srt_fn, video_fn):
-        with open(srt_fn) as f:
+        with open(srt_fn, encoding='utf-8') as f:
             subs = srt.parse(f.read())
 
         md = utils.MD(md_fn)

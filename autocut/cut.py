@@ -80,7 +80,7 @@ class Cutter:
         if utils.check_exists(output_fn, self.args.force):
             return
 
-        with open(fns['srt']) as f:
+        with open(fns['srt'], encoding='utf-8') as f:
             subs = list(srt.parse(f.read()))
 
         if fns['md']:
