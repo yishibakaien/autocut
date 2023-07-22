@@ -13,7 +13,7 @@ develop-eggs/
 dist/
 downloads/
 eggs/
-videos/
+videos*/
 .eggs/
 lib/
 lib64/
