@@ -2,7 +2,6 @@ import copy
 import glob
 import logging
 import os
-import re
 import time
 
 from . import cut, transcribe, utils
@@ -14,24 +13,21 @@ class Daemon:
         self.sleep = 1
 
     def run(self):
-        assert len(self.args.inputs) == 1, 'Must provide a single folder'
+        assert len(self.args.inputs) == 1, "Must provide a single folder"
         while True:
             self._iter()
             time.sleep(self.sleep)
-            self.sleep = min(60, self.sleep+1)
-
-    def _is_video(self, filename):
-        _, ext = os.path.splitext(filename)
-        return ext in ['.mp4', '.mov', '.mkv', '.flv']
+            self.sleep = min(60, self.sleep + 1)
 
     def _iter(self):
         folder = self.args.inputs[0]
-        files = sorted(list(glob.glob(os.path.join(folder, '*'))))
-        videos = [f for f in files if self._is_video(f)]
+        files = sorted(list(glob.glob(os.path.join(folder, "*"))))
+        media_files = [f for f in files if utils.is_video(f) or utils.is_audio(f)]
         args = copy.deepcopy(self.args)
-        for f in videos:
-            srt_fn = utils.change_ext(f, 'srt')
-            md_fn = utils.change_ext(f, 'md')
+        for f in media_files:
+            srt_fn = utils.change_ext(f, "srt")
+            md_fn = utils.change_ext(f, "md")
+            is_video_file = utils.is_video(f)
             if srt_fn not in files or md_fn not in files:
                 args.inputs = [f]
                 try:
@@ -39,20 +35,24 @@ class Daemon:
                     self.sleep = 1
                     break
                 except RuntimeError as e:
-                    logging.warn('Failed, may be due to the video is still on recording')
+                    logging.warn(
+                        "Failed, may be due to the video is still on recording"
+                    )
                     pass
             if md_fn in files:
                 if utils.add_cut(md_fn) in files:
                     continue
                 md = utils.MD(md_fn, self.args.encoding)
-                if not md.done_editing():
+                ext = "mp4" if is_video_file else "mp3"
+                if not md.done_editing() or os.path.exists(
+                    utils.change_ext(utils.add_cut(f), ext)
+                ):
                     continue
                 args.inputs = [f, md_fn, srt_fn]
                 cut.Cutter(args).run()
                 self.sleep = 1
-                break
 
-        args.inputs = [os.path.join(folder, 'autocut.md')]
+        args.inputs = [os.path.join(folder, "autocut.md")]
         merger = cut.Merger(args)
-        merger.write_md(videos)
+        merger.write_md(media_files)
         merger.run()
